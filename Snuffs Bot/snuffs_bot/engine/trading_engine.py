@@ -100,7 +100,7 @@ class SimulatedTrade:
         return self.would_have_profited
 
 from snuffs_bot.config.settings import get_settings, Settings
-from snuffs_bot.database.connection import init_database, db_session_scope
+from snuffs_bot.database.connection import init_database, create_all_tables, db_session_scope
 from snuffs_bot.database.models import Trade, AIDecision
 from snuffs_bot.api.client import TastytradeClient
 
@@ -343,6 +343,7 @@ class TradingEngine:
             # Initialize database
             logger.info("Initializing database...")
             init_database()
+            create_all_tables()  # Create tables if they don't exist
 
             # Initialize Tastytrade client for real market data
             logger.info("Connecting to Tastytrade for market data...")
