@@ -10,6 +10,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
+from pathlib import Path
 import sys
 import os
 import time
@@ -301,40 +302,69 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
+def is_running_on_render():
+    """Check if running on Render cloud platform"""
+    return os.environ.get("RENDER") == "true"
+
+
 def is_bot_running():
     """Check if the bot process is running - cached to prevent flickering"""
+    # On Render, bot status is managed by the separate worker service
+    # We assume it's running if we're on Render (check Render dashboard for actual status)
+    if is_running_on_render():
+        return True  # Bot runs as separate Render Background Worker
+
     # Use session state to cache the result for stability
     if 'bot_status_cache' not in st.session_state:
         st.session_state.bot_status_cache = False
         st.session_state.bot_status_time = 0
-    
+
     # Only recheck every 2 seconds to prevent flickering
     current_time = time.time()
     if current_time - st.session_state.bot_status_time > 2:
         try:
-            result = subprocess.run(["pgrep", "-f", "run_bot.py"], capture_output=True, text=True, timeout=1)
+            result = subprocess.run(["pgrep", "-f", "run_bot.py|snuffs_bot.main"], capture_output=True, text=True, timeout=1)
             st.session_state.bot_status_cache = result.returncode == 0
             st.session_state.bot_status_time = current_time
         except Exception:
             pass  # Keep previous status on error
-    
+
     return st.session_state.bot_status_cache
 
 
 def start_bot():
     """Start the trading bot"""
+    # On Render, bot is managed as separate Background Worker service
+    if is_running_on_render():
+        st.info("Bot runs as a separate Render service. Check Render dashboard to manage.")
+        return True
+
     if is_bot_running():
         return True
     try:
-        venv_python = "/home/coughlinsean24/Snuffs Bot/.venv/bin/python"
-        bot_script = "/home/coughlinsean24/Snuffs Bot/run_bot.py"
-        subprocess.Popen(
-            [venv_python, bot_script],
-            stdout=open("/tmp/snuffs_bot.log", "a"),
-            stderr=subprocess.STDOUT,
-            cwd="/home/coughlinsean24/Snuffs Bot",
-            start_new_session=True
-        )
+        # Use relative paths that work in any environment
+        import sys
+        bot_dir = Path(__file__).parent.parent
+        bot_script = bot_dir / "run_bot.py"
+
+        # Try run_bot.py first, fall back to module
+        if bot_script.exists():
+            subprocess.Popen(
+                [sys.executable, str(bot_script)],
+                stdout=open("/tmp/snuffs_bot.log", "a"),
+                stderr=subprocess.STDOUT,
+                cwd=str(bot_dir),
+                start_new_session=True
+            )
+        else:
+            # Use module invocation
+            subprocess.Popen(
+                [sys.executable, "-m", "snuffs_bot.main", "trade", "--paper"],
+                stdout=open("/tmp/snuffs_bot.log", "a"),
+                stderr=subprocess.STDOUT,
+                cwd=str(bot_dir),
+                start_new_session=True
+            )
         time.sleep(2)
         return is_bot_running()
     except Exception as e:
@@ -344,8 +374,13 @@ def start_bot():
 
 def stop_bot():
     """Stop the trading bot"""
+    # On Render, bot is managed as separate Background Worker service
+    if is_running_on_render():
+        st.info("Bot runs as a separate Render service. Check Render dashboard to manage.")
+        return False
+
     try:
-        subprocess.run(["pkill", "-f", "run_bot.py"], capture_output=True)
+        subprocess.run(["pkill", "-f", "run_bot.py|snuffs_bot.main"], capture_output=True)
         time.sleep(1)
         return not is_bot_running()
     except Exception:
