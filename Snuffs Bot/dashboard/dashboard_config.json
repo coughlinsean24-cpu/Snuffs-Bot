@@ -1,0 +1,6 @@
+{
+  "trading_mode": "Paper",
+  "auto_refresh": true,
+  "refresh_rate": 2,
+  "current_page": "Trade History"
+}

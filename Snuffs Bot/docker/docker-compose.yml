@@ -1,0 +1,102 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: trading_bot_db
+    environment:
+      POSTGRES_DB: trading_db
+      POSTGRES_USER: trader
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=en_US.UTF-8"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U trader -d trading_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - trading_network
+
+  # Redis for real-time updates
+  redis:
+    image: redis:7-alpine
+    container_name: trading_bot_redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - trading_network
+
+  # Main Trading Bot
+  trading_bot:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: trading_bot_main
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - ../.env
+    environment:
+      - DATABASE_URL=postgresql://trader:${DB_PASSWORD:-changeme}@postgres:5432/trading_db
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - ../logs:/app/logs
+      - ../snuffs_bot:/app/snuffs_bot
+    restart: unless-stopped
+    networks:
+      - trading_network
+    command: python main.py
+
+  # Streamlit Dashboard
+  dashboard:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: trading_bot_dashboard
+    depends_on:
+      - postgres
+      - redis
+      - trading_bot
+    env_file:
+      - ../.env
+    environment:
+      - DATABASE_URL=postgresql://trader:${DB_PASSWORD:-changeme}@postgres:5432/trading_db
+      - REDIS_URL=redis://redis:6379/0
+    ports:
+      - "${DASHBOARD_PORT:-8501}:8501"
+    volumes:
+      - ../dashboard:/app/dashboard
+      - ../snuffs_bot:/app/snuffs_bot
+    restart: unless-stopped
+    networks:
+      - trading_network
+    command: streamlit run dashboard/app.py --server.port 8501 --server.address 0.0.0.0
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  trading_network:
+    driver: bridge

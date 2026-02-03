@@ -1,0 +1,92 @@
+# Render Blueprint for Snuffs Bot - 0DTE SPY Options Trading Bot
+# Deploy: https://render.com/docs/blueprint-spec
+
+services:
+  # ===========================================
+  # TRADING BOT - Background Worker
+  # ===========================================
+  - type: worker
+    name: snuffs-trading-bot
+    runtime: docker
+    dockerfilePath: ./docker/Dockerfile
+    dockerContext: .
+    plan: starter  # $7/month - upgrade for more resources
+    region: ohio   # US East for lower latency to markets
+
+    # Persistent disk for SQLite databases and learnings
+    disk:
+      name: bot-data
+      mountPath: /app/data
+      sizeGB: 1
+
+    # Environment variables (set these in Render dashboard)
+    envVars:
+      # Tastytrade API
+      - key: TASTYTRADE_USERNAME
+        sync: false  # Set manually in dashboard
+      - key: TASTYTRADE_PASSWORD
+        sync: false
+      - key: TASTYTRADE_ENVIRONMENT
+        value: sandbox  # Change to 'production' for live
+      - key: DEFAULT_ACCOUNT
+        sync: false
+
+      # Trading Mode
+      - key: PAPER_TRADING
+        value: "true"
+      - key: LIVE_TRADING_ENABLED
+        value: "false"
+
+      # Capital & Risk
+      - key: STARTING_CAPITAL
+        value: "1000.0"
+      - key: RISK_PER_TRADE_PERCENT
+        value: "0.04"
+      - key: MAX_DAILY_LOSS
+        value: "100.0"
+      - key: MAX_CONCURRENT_POSITIONS
+        value: "3"
+
+      # Logging
+      - key: LOG_LEVEL
+        value: INFO
+      - key: PYTHONUNBUFFERED
+        value: "1"
+
+      # Data paths (use persistent disk)
+      - key: DATA_DIR
+        value: /app/data
+
+    # Start command for trading bot
+    dockerCommand: ["python", "-m", "snuffs_bot.main", "trade", "--paper"]
+
+  # ===========================================
+  # DASHBOARD - Web Service (Optional)
+  # ===========================================
+  - type: web
+    name: snuffs-dashboard
+    runtime: docker
+    dockerfilePath: ./docker/Dockerfile
+    dockerContext: .
+    plan: starter
+    region: ohio
+
+    # Health check
+    healthCheckPath: /
+
+    # Share the same disk as the worker
+    disk:
+      name: bot-data
+      mountPath: /app/data
+      sizeGB: 1
+
+    envVars:
+      - key: DASHBOARD_PORT
+        value: "8501"
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: DATA_DIR
+        value: /app/data
+
+    # Start command for dashboard
+    dockerCommand: ["python", "-m", "snuffs_bot.main", "dashboard"]

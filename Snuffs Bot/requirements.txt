@@ -1,0 +1,57 @@
+# Tastytrade API Integration
+tastytrade-sdk>=1.2.0
+
+# Data handling and utilities
+python-dotenv>=1.0.0
+pandas>=2.0.0
+numpy>=1.24.0
+pytz>=2023.3
+python-dateutil>=2.8.2
+
+# Async support
+aiohttp>=3.9.0
+
+# Logging and monitoring
+loguru>=0.7.0
+
+# Configuration
+pydantic>=2.0.0
+pydantic-settings>=2.0.0
+
+# Testing
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.1.0
+
+# AI/ML - Anthropic Claude Integration
+anthropic>=0.40.0
+
+# Local AI - XGBoost for self-learning model
+xgboost>=2.0.0
+scikit-learn>=1.3.0
+
+# Database - PostgreSQL
+sqlalchemy>=2.0.0
+alembic>=1.12.0
+psycopg2-binary>=2.9.9
+asyncpg>=0.29.0
+
+# Dashboard - Streamlit
+streamlit>=1.30.0
+plotly>=5.18.0
+altair>=5.2.0
+
+# Real-time Updates
+redis>=5.0.0
+hiredis>=2.3.0
+
+# Technical Analysis
+pandas-ta-classic>=0.3.59
+
+# Utilities
+requests>=2.31.0
+
+# Authentication & Security (Multi-User Support)
+bcrypt>=4.1.0
+PyJWT>=2.8.0
+cryptography>=41.0.0

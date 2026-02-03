@@ -1,0 +1,13 @@
+[Unit]
+Description=Snuffs Bot Background Learner - Continuous AI Training
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/home/coughlinsean24/snuffs_bot_link/scripts/run_learner.sh
+Restart=always
+RestartSec=60
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=default.target
