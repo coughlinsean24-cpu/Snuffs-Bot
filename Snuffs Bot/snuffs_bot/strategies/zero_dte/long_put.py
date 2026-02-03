@@ -174,8 +174,8 @@ class LongPutStrategy(ZeroDTEStrategy):
         )
 
         # Calculate position parameters
-        total_debit = premium * contracts  # Cost per share, not per contract
-        max_loss = total_debit * 100  # Per contract in dollars
+        # entry_debit is PER-SHARE premium (not total) - this is what we compare against streaming prices
+        max_loss = premium * 100 * contracts  # Total max loss in dollars
         # Max profit for puts is strike - premium (if SPY goes to 0)
         max_profit = (strike - premium) * 100 * contracts
 
@@ -183,7 +183,7 @@ class LongPutStrategy(ZeroDTEStrategy):
             position_id=self.generate_position_id(),
             strategy_type=self.strategy_type,
             legs=[put_leg],
-            entry_debit=total_debit,
+            entry_debit=premium,  # Per-share premium, NOT total
             entry_credit=0.0,
             max_profit=max_profit,
             max_loss=max_loss,

@@ -618,7 +618,9 @@ class TradingEngine:
         """Check if within trading hours (excluding open/close buffers)"""
         if not self.is_market_day():
             return False
-        now = datetime.now().time()
+        # Use EST timezone for trading hours comparison
+        est = pytz.timezone('US/Eastern')
+        now = datetime.now(est).time()
         return self.trading_start <= now <= self.trading_cutoff
 
     def _are_quotes_fresh(self) -> bool:

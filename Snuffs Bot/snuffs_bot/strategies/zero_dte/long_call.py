@@ -174,15 +174,15 @@ class LongCallStrategy(ZeroDTEStrategy):
         )
 
         # Calculate position parameters
-        total_debit = premium * contracts  # Cost per share, not per contract
-        max_loss = total_debit * 100  # Per contract in dollars
+        # entry_debit is PER-SHARE premium (not total) - this is what we compare against streaming prices
+        max_loss = premium * 100 * contracts  # Total max loss in dollars
         max_profit = float('inf')  # Unlimited upside
 
         position = SpreadPosition(
             position_id=self.generate_position_id(),
             strategy_type=self.strategy_type,
             legs=[call_leg],
-            entry_debit=total_debit,
+            entry_debit=premium,  # Per-share premium, NOT total
             entry_credit=0.0,
             max_profit=max_profit,
             max_loss=max_loss,
