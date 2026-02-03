@@ -135,8 +135,8 @@ class Settings(BaseSettings):
 
     # Database Configuration
     database_url: str = Field(
-        ...,
-        description="PostgreSQL connection URL (postgresql://user:pass@host:port/db)"
+        default="sqlite:///data/trading.db",
+        description="Database URL (sqlite:///path/to/db.db or postgresql://user:pass@host:port/db)"
     )
     database_pool_size: int = Field(
         default=5,

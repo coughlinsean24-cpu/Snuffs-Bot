@@ -56,8 +56,15 @@ class BaseAgent(ABC):
         self.role_description = role_description
         self.settings = get_settings()
 
-        # Initialize Anthropic client
-        self.client = anthropic.Anthropic(api_key=self.settings.anthropic_api_key)
+        # Initialize Anthropic client (requires API key)
+        api_key = self.settings.anthropic_api_key
+        if not api_key:
+            raise ValueError(
+                f"Cannot initialize {name} agent: ANTHROPIC_API_KEY is not set. "
+                "Set USE_LOCAL_AI=true to use local XGBoost model instead."
+            )
+        
+        self.client = anthropic.Anthropic(api_key=api_key)
 
         # Track usage
         self.total_tokens_used = 0

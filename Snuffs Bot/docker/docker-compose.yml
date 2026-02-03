@@ -58,13 +58,16 @@ services:
     environment:
       - DATABASE_URL=postgresql://trader:${DB_PASSWORD:-changeme}@postgres:5432/trading_db
       - REDIS_URL=redis://redis:6379/0
+      - USE_LOCAL_AI=true
+      - PAPER_TRADING=true
     volumes:
       - ../logs:/app/logs
       - ../snuffs_bot:/app/snuffs_bot
+      - ../data:/app/data
     restart: unless-stopped
     networks:
       - trading_network
-    command: python main.py
+    command: python run_bot.py
 
   # Streamlit Dashboard
   dashboard:

@@ -37,6 +37,14 @@ services:
       - key: LIVE_TRADING_ENABLED
         value: "false"
 
+      # AI Configuration - USE LOCAL AI (no Claude API needed)
+      - key: USE_LOCAL_AI
+        value: "true"
+
+      # Database - Use SQLite on persistent disk (no external DB needed)
+      - key: DATABASE_URL
+        value: "sqlite:////app/data/trading.db"
+
       # Capital & Risk
       - key: STARTING_CAPITAL
         value: "1000.0"

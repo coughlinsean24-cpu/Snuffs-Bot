@@ -363,10 +363,20 @@ class TradingEngine:
                 logger.warning("Will use simulated market data")
                 self.tastytrade_client = None
 
-            # Initialize AI orchestrator
-            logger.info("Initializing AI orchestrator...")
-            from snuffs_bot.ai.orchestrator import AIOrchestrator
-            self.orchestrator = AIOrchestrator()
+            # Initialize AI orchestrator (only if not using local AI)
+            if not self.settings.use_local_ai:
+                logger.info("Initializing AI orchestrator (Claude)...")
+                try:
+                    from snuffs_bot.ai.orchestrator import AIOrchestrator
+                    self.orchestrator = AIOrchestrator()
+                    logger.success("AI Orchestrator initialized")
+                except Exception as e:
+                    logger.warning(f"Could not initialize AI orchestrator: {e}")
+                    logger.warning("Falling back to local AI mode")
+                    # Force local AI mode if Claude fails
+                    self.settings.use_local_ai = True
+            else:
+                logger.info("Skipping Claude AI orchestrator (using Local AI)")
 
             # Initialize Local AI (XGBoost-based self-learning model)
             logger.info("Initializing Local AI system...")

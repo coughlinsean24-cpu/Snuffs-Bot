@@ -4,11 +4,12 @@ Database connection and session management for PostgreSQL
 Provides connection pooling, session creation, and database initialization
 """
 
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, text, event
 from sqlalchemy.orm import sessionmaker, scoped_session, Session
-from sqlalchemy.pool import QueuePool
+from sqlalchemy.pool import QueuePool, StaticPool
 from contextlib import contextmanager
 from typing import Generator
+from pathlib import Path
 from loguru import logger
 
 from .models import Base
@@ -25,10 +26,11 @@ def init_database(database_url: str = None, echo: bool = False) -> None:
     Initialize database engine and session factory
 
     Args:
-        database_url: PostgreSQL connection URL (uses settings if not provided)
+        database_url: Database connection URL (SQLite or PostgreSQL)
         echo: Enable SQL query logging
 
     Example:
+        init_database("sqlite:///data/trading.db")
         init_database("postgresql://user:pass@localhost:5432/trading_db")
     """
     global _engine, _session_factory
@@ -36,17 +38,43 @@ def init_database(database_url: str = None, echo: bool = False) -> None:
     settings = get_settings()
     db_url = database_url or settings.database_url
 
-    logger.info(f"Initializing database connection to {db_url.split('@')[-1]}")  # Hide credentials
-
-    # Create engine with connection pooling
-    _engine = create_engine(
-        db_url,
-        poolclass=QueuePool,
-        pool_size=settings.database_pool_size,
-        max_overflow=10,
-        pool_pre_ping=True,  # Verify connections before use
-        echo=echo,
-    )
+    # Detect database type and configure appropriately
+    is_sqlite = db_url.startswith("sqlite")
+    
+    if is_sqlite:
+        # For SQLite: ensure directory exists
+        if ":///" in db_url:
+            db_path = db_url.split("///")[-1]
+            Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+        
+        logger.info(f"Initializing SQLite database: {db_url}")
+        
+        # SQLite configuration - use StaticPool for thread safety
+        _engine = create_engine(
+            db_url,
+            poolclass=StaticPool,
+            connect_args={"check_same_thread": False},
+            echo=echo,
+        )
+        
+        # Enable foreign keys for SQLite
+        @event.listens_for(_engine, "connect")
+        def set_sqlite_pragma(dbapi_connection, connection_record):
+            cursor = dbapi_connection.cursor()
+            cursor.execute("PRAGMA foreign_keys=ON")
+            cursor.close()
+    else:
+        # PostgreSQL configuration with connection pooling
+        logger.info(f"Initializing PostgreSQL connection to {db_url.split('@')[-1]}")
+        
+        _engine = create_engine(
+            db_url,
+            poolclass=QueuePool,
+            pool_size=settings.database_pool_size,
+            max_overflow=10,
+            pool_pre_ping=True,
+            echo=echo,
+        )
 
     # Create session factory
     _session_factory = scoped_session(
@@ -57,7 +85,7 @@ def init_database(database_url: str = None, echo: bool = False) -> None:
         )
     )
 
-    logger.success("Database connection initialized")
+    logger.success(f"Database connection initialized ({'SQLite' if is_sqlite else 'PostgreSQL'})")
 
 
 def create_all_tables() -> None:
