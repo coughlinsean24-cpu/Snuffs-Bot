@@ -82,10 +82,10 @@ class Settings(BaseSettings):
         description="Maximum API requests per second"
     )
 
-    # Anthropic Claude Configuration
+    # Anthropic Claude Configuration (optional - bot uses local AI if not set)
     anthropic_api_key: str = Field(
-        ...,
-        description="Anthropic API key for Claude AI decision engine"
+        default="",
+        description="Anthropic API key for Claude AI decision engine (optional)"
     )
     claude_model: str = Field(
         default="claude-sonnet-4-20250514",
